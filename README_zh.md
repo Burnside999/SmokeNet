@@ -1,6 +1,6 @@
 # SmokeNet
 
-_基于时间序列传感器的轻量级烟雾检测网络 | A Lightweight Smoke Detector Network Based on Time-Series Sensors_
+_一种基于时间序列的轻量级烟感用神经网络 | A Lightweight Smoke Detector Network Based on Time Series Analysis_
 
 [English version / 英文版](README.md)
 
