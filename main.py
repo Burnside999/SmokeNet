@@ -13,9 +13,36 @@ from smokenet.train import train
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["train", "eval"], default="train")
+    parser.add_argument(
+        "--config", default="config/default.yaml", help="Path to config YAML file"
+    )
+    parser.add_argument(
+        "--model", default=None, help="Path to model checkpoint (eval mode only)"
+    )
+    parser.add_argument("--batch-size", type=int, help="Override training batch size")
+    parser.add_argument("--num-epochs", type=int, help="Override training epochs")
+    parser.add_argument(
+        "--learning-rate", type=float, help="Override optimizer learning rate"
+    )
+    parser.add_argument("--device", type=str, help="Override training device")
+    parser.add_argument("--window-size", type=int, help="Override data window size")
     args = parser.parse_args()
 
-    data_cfg, model_cfg, train_cfg = load_config()
+    data_cfg, model_cfg, train_cfg = load_config(args.config)
+
+    def warn_override(cfg, attr, value, label: str):
+        if value is None:
+            return
+        old = getattr(cfg, attr)
+        if value != old:
+            print(f"[WARN] override{label}: {old} -> {value}")
+        setattr(cfg, attr, value)
+
+    warn_override(train_cfg, "batch_size", args.batch_size, "batch_size")
+    warn_override(train_cfg, "num_epochs", args.num_epochs, "num_epochs")
+    warn_override(train_cfg, "learning_rate", args.learning_rate, "learning_rate")
+    warn_override(train_cfg, "device", args.device, "device")
+    warn_override(data_cfg, "window_size", args.window_size, "window_size")
     # model accepts raw sensor channels; windowing handled by dataset
     model_cfg.in_channels = data_cfg.channels
 
@@ -41,10 +68,14 @@ def main():
     )
 
     if args.mode == "train":
+        if args.model:
+            print("[WARN] --model only used in eval mode, ignored in train mode.")
         model, _ = train(train_loader, val_loader, model_cfg, train_cfg, fuel_enabled)
     else:
-        # TODO: 从文件加载模型后 evaluate(...)
-        pass
+        if not args.model:
+            print("[WARN] no --model provided, cannot load weights in eval mode.")
+        else:
+            print(f"[WARN] eval mode not implemented, skip loading model: {args.model}")
 
 
 if __name__ == "__main__":
