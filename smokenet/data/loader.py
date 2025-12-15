@@ -1,13 +1,14 @@
 # smokenet/data/loader.py
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
 from torch.utils.data import random_split
 
 from smokenet.config import DataConfig
+
 from .window import WindowDataset
 
 
@@ -18,26 +19,34 @@ def _load_csv(path: Path) -> torch.Tensor:
     return torch.from_numpy(array)
 
 
-def _load_label(label_tensor: torch.Tensor) -> Tuple[torch.Tensor, Optional[int]]:
+def _load_label(label_tensor: torch.Tensor) -> tuple[torch.Tensor, int | None]:
     if label_tensor.dim() == 1:
         fire_seq = label_tensor.long()
         fuel_label = None
     elif label_tensor.dim() == 2:
         fire_seq = label_tensor[:, 0].long()
-        fuel_label = int(label_tensor[0, 1].item()) if label_tensor.shape[1] > 1 else None
+        fuel_label = (
+            int(label_tensor[0, 1].item()) if label_tensor.shape[1] > 1 else None
+        )
         if fuel_label is not None:
             # Ensure the provided fuel label is sequence-level and consistent.
             if not torch.all(label_tensor[:, 1] == label_tensor[0, 1]):
-                raise ValueError("Fuel label column must be constant across the sequence")
+                raise ValueError(
+                    "Fuel label column must be constant across the sequence"
+                )
     else:
         raise ValueError("Label tensor must be 1D or 2D")
 
     return fire_seq, fuel_label
 
 
-def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[Tuple[Path, Path]]:
-    data_files: Dict[str, Path] = {p.stem: p for p in data_dir.glob("*.csv") if p.is_file()}
-    label_files: Dict[str, Path] = {p.stem: p for p in label_dir.glob("*.csv") if p.is_file()}
+def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[tuple[Path, Path]]:
+    data_files: dict[str, Path] = {
+        p.stem: p for p in data_dir.glob("*.csv") if p.is_file()
+    }
+    label_files: dict[str, Path] = {
+        p.stem: p for p in label_dir.glob("*.csv") if p.is_file()
+    }
 
     if data_files.keys() != label_files.keys():
         missing_in_labels = sorted(data_files.keys() - label_files.keys())
@@ -51,16 +60,16 @@ def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[Tuple[Path, Path
         yield data_files[stem], label_files[stem]
 
 
-def load_datasets(data_cfg: DataConfig) -> Tuple[WindowDataset, WindowDataset]:
+def load_datasets(data_cfg: DataConfig) -> tuple[WindowDataset, WindowDataset]:
     data_dir = Path(data_cfg.data_dir)
     label_dir = Path(data_cfg.label_dir)
 
     if not data_dir.exists() or not label_dir.exists():
         raise FileNotFoundError("Data or label directory does not exist")
 
-    signals: List[torch.Tensor] = []
-    fire_labels: List[torch.Tensor] = []
-    fuel_labels: List[int | None] = []
+    signals: list[torch.Tensor] = []
+    fire_labels: list[torch.Tensor] = []
+    fuel_labels: list[int | None] = []
 
     for data_path, label_path in _collect_pairs(data_dir, label_dir):
         signal = _load_csv(data_path)
@@ -69,7 +78,10 @@ def load_datasets(data_cfg: DataConfig) -> Tuple[WindowDataset, WindowDataset]:
 
         print(signal.shape, fire_seq.shape)
 
-        if signal.shape[-1] != fire_seq.shape[0] and signal.shape[0] != fire_seq.shape[0]:
+        if (
+            signal.shape[-1] != fire_seq.shape[0]
+            and signal.shape[0] != fire_seq.shape[0]
+        ):
             raise ValueError(
                 f"Signal length ({signal.shape[-1]}) and label length ({fire_seq.shape[0]}) must match"
             )
@@ -80,8 +92,10 @@ def load_datasets(data_cfg: DataConfig) -> Tuple[WindowDataset, WindowDataset]:
 
     if not signals:
         raise ValueError("No paired data/label files were found.")
-    
-    assert len(signals) == len(fire_labels) == len(fuel_labels), "Signals and labels counts must match"
+
+    assert len(signals) == len(fire_labels) == len(fuel_labels), (
+        "Signals and labels counts must match"
+    )
 
     dataset = WindowDataset(
         signals,

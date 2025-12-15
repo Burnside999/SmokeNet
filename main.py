@@ -1,14 +1,16 @@
 # main.py
 
 import argparse
+
 import torch
 from torch.utils.data import DataLoader
 
 from smokenet.config import load_config
-from smokenet.data.loader import load_datasets
 from smokenet.data.collate import smoke_collate_fn
-from smokenet.train import train
+from smokenet.data.loader import load_datasets
 from smokenet.evaluate import evaluate
+from smokenet.train import train
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -21,7 +23,9 @@ def main():
 
     train_dataset, val_dataset = load_datasets(data_cfg)
 
-    base_dataset = train_dataset.dataset if hasattr(train_dataset, "dataset") else train_dataset
+    base_dataset = (
+        train_dataset.dataset if hasattr(train_dataset, "dataset") else train_dataset
+    )
     fuel_available = getattr(base_dataset, "fuel_available", False)
     fuel_enabled = model_cfg.enable_fuel_classification and fuel_available
 
@@ -29,15 +33,15 @@ def main():
         train_dataset,
         batch_size=train_cfg.batch_size,
         shuffle=True,
-        collate_fn=smoke_collate_fn
+        collate_fn=smoke_collate_fn,
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=train_cfg.batch_size,
         shuffle=False,
-        collate_fn=smoke_collate_fn
+        collate_fn=smoke_collate_fn,
     )
-    
+
     if args.mode == "train":
         model = train(train_loader, model_cfg, train_cfg, fuel_enabled)
         # TODO: 保存 model
@@ -46,6 +50,7 @@ def main():
     else:
         # TODO: 从文件加载模型后 evaluate(...)
         pass
+
 
 if __name__ == "__main__":
     main()

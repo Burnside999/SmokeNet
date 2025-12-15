@@ -2,6 +2,7 @@
 
 import torch
 
+
 def masked_binary_accuracy(
     logits: torch.Tensor, targets: torch.Tensor, mask: torch.Tensor
 ) -> float:
@@ -19,6 +20,7 @@ def masked_binary_accuracy(
     correct = ((preds == targets) * mask.long()).sum().item()
     total = mask.sum().item()
     return correct / total if total > 0 else 0.0
+
 
 def multiclass_accuracy(logits: torch.Tensor, targets: torch.Tensor) -> float:
     """

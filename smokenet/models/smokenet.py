@@ -1,12 +1,12 @@
 # smokenet/models/smokenet.py
 
-from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from .base import BaseTemporalModel
+
 
 class SmokeNet(BaseTemporalModel):
     # Conv1d -> BiLSTM -> masked mean pooling -> two heads(fire / none-fire + classification)
@@ -20,7 +20,6 @@ class SmokeNet(BaseTemporalModel):
         dropout: float = 0.3,
         enable_fuel_classification: bool = True,
     ):
-
         super().__init__()
 
         self.enable_fuel_classification = enable_fuel_classification
@@ -60,7 +59,7 @@ class SmokeNet(BaseTemporalModel):
         else:
             self.fc_fuel = None
 
-    def forward(self, x, lengths) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+    def forward(self, x, lengths) -> tuple[torch.Tensor, torch.Tensor | None]:
         """
         x:       (batch, T, C)
         lengths: (batch,)
@@ -98,7 +97,7 @@ class SmokeNet(BaseTemporalModel):
 
         h_seq = self.dropout(h_seq)
 
-        fuel_logits: Optional[torch.Tensor]
+        fuel_logits: torch.Tensor | None
         if self.enable_fuel_classification and self.fc_fuel is not None:
             fuel_logits = self.fc_fuel(h_seq)  # (B, num_classes)
         else:

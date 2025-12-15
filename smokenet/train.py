@@ -1,13 +1,13 @@
 # smokenet/train.py
 
-from typing import Optional, Tuple
+
 import torch
 from torch.utils.data import DataLoader
 
 from .config import ModelConfig, TrainingConfig
 from .models import build_model
-from .utils.seed import set_seed
 from .utils.metrics import masked_binary_accuracy, multiclass_accuracy
+from .utils.seed import set_seed
 
 
 def train_one_epoch(
@@ -18,7 +18,7 @@ def train_one_epoch(
     lambda_fire: float,
     lambda_fuel: float,
     fuel_enabled: bool,
-) -> Tuple[float, float, Optional[float]]:
+) -> tuple[float, float, float | None]:
     model.train()
     criterion_fire = torch.nn.BCEWithLogitsLoss(reduction="none")
     criterion_fuel = torch.nn.CrossEntropyLoss() if fuel_enabled else None
@@ -43,7 +43,9 @@ def train_one_epoch(
 
         if fuel_enabled:
             if fuel_logits is None or y_fuel is None:
-                raise ValueError("Fuel classification is enabled but the model did not return logits or labels.")
+                raise ValueError(
+                    "Fuel classification is enabled but the model did not return logits or labels."
+                )
             loss_fuel = criterion_fuel(fuel_logits, y_fuel)
             loss = loss + lambda_fuel * loss_fuel
 
@@ -103,10 +105,9 @@ def train(
             train_cfg.lambda_fuel,
             fuel_enabled,
         )
-        fuel_log = f" fuel_acc={fuel_acc:.4f}" if fuel_acc is not None else " fuel_acc=N/A"
-        print(
-            f"[Epoch {epoch}] "
-            f"loss={loss:.4f} fire_acc={fire_acc:.4f}{fuel_log}"
+        fuel_log = (
+            f" fuel_acc={fuel_acc:.4f}" if fuel_acc is not None else " fuel_acc=N/A"
         )
+        print(f"[Epoch {epoch}] loss={loss:.4f} fire_acc={fire_acc:.4f}{fuel_log}")
 
     return model

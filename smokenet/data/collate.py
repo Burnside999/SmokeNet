@@ -1,10 +1,7 @@
-from typing import List, Tuple, Optional
-
 import torch
 
-def smoke_collate_fn(
-    batch: List[Tuple[torch.Tensor, torch.Tensor, Optional[int]]]
-):
+
+def smoke_collate_fn(batch: list[tuple[torch.Tensor, torch.Tensor, int | None]]):
     """
     batch: list of (x, y_fire_seq, y_fuel)
     x: (T_i, feature_dim) where feature_dim depends on config
@@ -15,7 +12,7 @@ def smoke_collate_fn(
 
     xs = []
     y_fire = []
-    y_fuel: List[Optional[int]] = []
+    y_fuel: list[int | None] = []
     mask = torch.zeros(len(batch), T_max, dtype=torch.float32)
 
     for i, (x, yf, yfu) in enumerate(batch):
@@ -34,13 +31,13 @@ def smoke_collate_fn(
         y_fuel.append(yfu)
         mask[i, :T] = 1.0
 
-    xs = torch.stack(xs, dim=0)              # (B, T_max, feature_dim)
+    xs = torch.stack(xs, dim=0)  # (B, T_max, feature_dim)
     lengths = torch.tensor(lengths, dtype=torch.long)
     y_fire = torch.stack(y_fire, dim=0).float()
 
     fuel_available = all(item is not None for item in y_fuel)
     if fuel_available:
-        y_fuel_tensor: Optional[torch.Tensor] = torch.tensor(y_fuel, dtype=torch.long)
+        y_fuel_tensor: torch.Tensor | None = torch.tensor(y_fuel, dtype=torch.long)
     else:
         y_fuel_tensor = None
 

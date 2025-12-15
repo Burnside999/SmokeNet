@@ -2,9 +2,10 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import yaml
+
 
 @dataclass
 class DataConfig:
@@ -15,7 +16,7 @@ class DataConfig:
     channels: int = 3
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DataConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "DataConfig":
         return cls(**data)
 
 
@@ -31,7 +32,7 @@ class ModelConfig:
     enable_fuel_classification: bool = True
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ModelConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "ModelConfig":
         return cls(**data)
 
 
@@ -46,11 +47,13 @@ class TrainingConfig:
     device: str = "cuda"  # or "cpu"
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TrainingConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "TrainingConfig":
         return cls(**data)
 
 
-def load_config(path: str = "config/default.yaml") -> Tuple[DataConfig, ModelConfig, TrainingConfig]:
+def load_config(
+    path: str = "config/default.yaml",
+) -> tuple[DataConfig, ModelConfig, TrainingConfig]:
     """Load YAML configuration and convert to dataclasses."""
 
     cfg_path = Path(path)
@@ -58,7 +61,7 @@ def load_config(path: str = "config/default.yaml") -> Tuple[DataConfig, ModelCon
         raise FileNotFoundError(f"Config file not found at {cfg_path}")
 
     with cfg_path.open("r", encoding="utf-8") as f:
-        raw_cfg: Dict[str, Any] = yaml.safe_load(f)
+        raw_cfg: dict[str, Any] = yaml.safe_load(f)
 
     data_cfg = DataConfig.from_dict(raw_cfg.get("data", {}))
     model_cfg = ModelConfig.from_dict(raw_cfg.get("model", {}))

@@ -1,6 +1,5 @@
 # smokenet/evaluate.py
 
-from typing import Optional
 
 import torch
 from torch.utils.data import DataLoader
@@ -28,14 +27,12 @@ def evaluate(model, dataloader: DataLoader, device: torch.device, fuel_enabled: 
         if fuel_enabled and fuel_logits is not None and y_fuel is not None:
             total_fuel_acc += multiclass_accuracy(fuel_logits, y_fuel)
         n_batches += 1
-    
+
     if n_batches == 0:
         print("[Eval] Warning: validation dataloader is empty")
         return
 
     fire_acc = total_fire_acc / n_batches
-    fuel_acc: Optional[float] = (
-        total_fuel_acc / n_batches if fuel_enabled else None
-    )
+    fuel_acc: float | None = total_fuel_acc / n_batches if fuel_enabled else None
     fuel_log = f" fuel_acc={fuel_acc:.4f}" if fuel_acc is not None else " fuel_acc=N/A"
     print(f"[Eval] fire_acc={fire_acc:.4f}{fuel_log}")

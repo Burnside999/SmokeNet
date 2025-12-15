@@ -1,6 +1,5 @@
 # smokenet/data/dataset.py
 
-from typing import List, Optional, Tuple
 
 import torch
 from torch.utils.data import Dataset
@@ -35,9 +34,9 @@ def _build_windows(signal: torch.Tensor, window_size: int) -> torch.Tensor:
 class WindowDataset(Dataset):
     def __init__(
         self,
-        signals: List[torch.Tensor],
-        fire_labels: List[torch.Tensor],
-        fuel_labels: List[Optional[int]],
+        signals: list[torch.Tensor],
+        fire_labels: list[torch.Tensor],
+        fuel_labels: list[int | None],
         window_size: int,
         channels: int,
     ):
@@ -69,7 +68,7 @@ class WindowDataset(Dataset):
     def __len__(self):
         return len(self.signals)
 
-    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor, Optional[int]]:
+    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, int | None]:
         signal = self.signals[idx]
         windows = _build_windows(signal, self.window_size)  # (T, channels*window)
         y_fire = self.fire_labels[idx].long()
