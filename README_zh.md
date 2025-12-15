@@ -13,6 +13,7 @@ SmokeNet 是一个以研究为导向的 PyTorch 流水线，用于从多通道�
 - 🧪 **可复现训练**：集中配置文件、固定随机种子、可视化指标输出。
 - 🧱 **模块化数据加载**：基于窗口的 `WindowDataset` 读取原始 CSV 序列与标签对。
 - 📈 **评估与可视化**：内置精度、Top-K 可视化与最佳模型自动保存。
+- 🔌 **可扩展的主干选择**：在 `smokenet/models/` 添加新架构并在 `MODEL_REGISTRY` 注册，即可尝试不同的 CNN/RNN/Transformer 混合方案，无需改动训练逻辑。
 
 ## 项目结构
 - `main.py`: 命令行入口，完成配置加载、数据准备与训练/评估切换。
@@ -61,8 +62,18 @@ python main.py --mode train --batch-size 16 --learning-rate 5e-4 --device cuda
 - 检查点：最佳与最新权重自动保存在 `outputs/weights/`。
 - 可视化：精度曲线保存在 `outputs/figures/`。
 
+## 可扩展性
+- **插拔式模型**：在 `smokenet/models/` 下新增继承自 `BaseTemporalModel` 的子类（如 `transformer.py`），并在 `smokenet/models/__init__.py` 的 `MODEL_REGISTRY` 注册。配置文件里将 `model.name` 指向新模型即可调用，无需修改训练管线。
+- **配置驱动**：超参、功能开关（如 `enable_fuel_classification`）和数据设置全部集中在 YAML，可通过覆盖配置而非改代码来快速跑新实验。
+
+## 开源许可
+SmokeNet 以 [MIT 许可](LICENSE) 开源。您可以自由使用、修改和分发（包括商业用途），但请保留版权与许可声明；提交的贡献默认同样遵循 MIT 许可。
+
 ## 引用
 若在研究中使用 SmokeNet，请引用本仓库并明确使用的配置以保证结果可复现。
+
+## 特别鸣谢
+本项目在实现过程中参考并受益于 [OpenAI Codex](https://chatgpt.com/codex) 提供的代码实现思路及文档撰写建议，特此致谢。
 
 ---
 

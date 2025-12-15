@@ -13,6 +13,7 @@ SmokeNet is a research-oriented PyTorch pipeline for detecting smoke events from
 - 🧪 **Reproducible training**：Centralized configuration (`config/default.yaml`), fixed random seeds, and visualized metric outputs.
 - 🧱 **Modular data loader**：A window-based `WindowDataset` for handling raw CSV time series and corresponding labels.
 - 📈 **Evaluation utilities**：Built-in accuracy metrics, Top-K visualizations, and automatic saving of the best-performing model.
+- 🔌 **Extensible backbone choices**: Drop new architectures into `smokenet/models/` and register them in `MODEL_REGISTRY` to experiment with alternative CNN/RNN/Transformer-style hybrids without changing the training loop.
 
 ## Project Structure
 - `main.py`: CLI entry point, responsible for configuration loading, data preparation, and switching between training and evaluation modes.
@@ -62,8 +63,18 @@ Key fields in `config/default.yaml`:
 - Checkpoints: best/last weights auto-saved to `outputs/weights/`.
 - Visualizations: accuracy plots under `outputs/figures/`.
 
+## Extensibility
+- **Plug-and-play models**: Add a new `BaseTemporalModel` subclass under `smokenet/models/` (e.g., `transformer.py`) and register it inside `MODEL_REGISTRY` in `smokenet/models/__init__.py`. Once registered, select it via `model.name` in the config without touching the rest of the pipeline.
+- **Configuration-first**: Hyperparameters, feature flags (e.g., `enable_fuel_classification`), and data settings live in YAML so new experiments can be driven by config overrides instead of code edits.
+
+## License
+SmokeNet is released under the [MIT License](LICENSE). You are free to use, modify, and distribute the code (including in commercial products) provided you retain the copyright and license notice in derivative works. Contributions are welcome under the same terms.
+
 ## Citation
 If you build upon SmokeNet, please cite the repository and your configuration to ensure reproducibility.
+
+## Acknowledgments
+This project benefited from the code implementation ideas and documentation writing suggestions provided by [OpenAI Codex](https://chatgpt.com/codex). We would like to express our sincere thanks.
 
 ---
 
