@@ -1,0 +1,24 @@
+data:
+  data_dir: dataset/data
+  label_dir: dataset/label
+  split_ratio: 0.8  # split_ratio for `train` ratio
+  window_size: 16
+  channels: 3
+
+model:
+  model_name: smokenet
+  in_channels: 3
+  cnn_hidden: 32
+  lstm_hidden: 64
+  lstm_layers: 1
+  num_fuel_classes: 5
+  dropout: 0.3
+
+training:
+  batch_size: 32
+  num_epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  lambda_fire: 1.0
+  lambda_fuel: 1.0
+  device: cuda
