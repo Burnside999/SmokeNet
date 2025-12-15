@@ -61,19 +61,21 @@ class SmokeNet(BaseTemporalModel):
 
     def forward(self, x, lengths) -> tuple[torch.Tensor, torch.Tensor | None]:
         """
-        x:       (batch, T, C)
-        lengths: (batch,)
+        Args:
+            x:       (batch, T, channels, window_size)
+            lengths: (batch,)
         """
-        # (B, T, C) -> (B, C, T)
-        x = x.transpose(1, 2)
+        batch_size, T_max, channels, window = x.shape
 
-        # 1D-CNN
+        # Merge batch and time to extract a feature vector per sliding window.
+        x = x.reshape(batch_size * T_max, channels, window)
         x = self.conv1(x)
         x = self.bn1(x)
         x = F.relu(x)
 
-        # (B, C, T) -> (B, T, C)
-        x = x.transpose(1, 2)
+        # Global average over the window dimension -> (B*T, cnn_hidden)
+        x = x.mean(dim=-1)
+        x = x.reshape(batch_size, T_max, -1)
 
         # pack padded sequence
         packed = nn.utils.rnn.pack_padded_sequence(

@@ -76,8 +76,6 @@ def load_datasets(data_cfg: DataConfig) -> tuple[WindowDataset, WindowDataset]:
         label_tensor = _load_csv(label_path)
         fire_seq, fuel = _load_label(label_tensor)
 
-        print(signal.shape, fire_seq.shape)
-
         if (
             signal.shape[-1] != fire_seq.shape[0]
             and signal.shape[0] != fire_seq.shape[0]

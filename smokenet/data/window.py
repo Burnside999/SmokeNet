@@ -13,8 +13,9 @@ def _build_windows(signal: torch.Tensor, window_size: int) -> torch.Tensor:
         window_size: Number of timesteps per window.
 
     Returns:
-        Tensor shaped (T_raw, C * window_size) where every timestep has a
-        zero-padded left-aligned window flattened along the feature dimension.
+        Tensor shaped (T_raw, C, window_size) where each timestep contains a
+        zero-padded window of the most recent ``window_size`` observations in
+        chronological order (older values are left-aligned with leading zeros).
     """
 
     if signal.dim() != 2:
@@ -26,9 +27,10 @@ def _build_windows(signal: torch.Tensor, window_size: int) -> torch.Tensor:
         start = max(0, t - window_size + 1)
         end = t + 1
         window = signal[:, start:end]
+        # Right-align the available history so the newest sample is at index -1
         windows[t, :, -window.shape[1] :] = window
 
-    return windows.reshape(T_raw, channels * window_size)
+    return windows
 
 
 class WindowDataset(Dataset):
@@ -70,7 +72,7 @@ class WindowDataset(Dataset):
 
     def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, int | None]:
         signal = self.signals[idx]
-        windows = _build_windows(signal, self.window_size)  # (T, channels*window)
+        windows = _build_windows(signal, self.window_size)  # (T, channels, window)
         y_fire = self.fire_labels[idx].long()
         y_fuel = self.fuel_labels[idx]
         return windows, y_fire, y_fuel

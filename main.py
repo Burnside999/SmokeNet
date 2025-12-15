@@ -18,8 +18,8 @@ def main():
     args = parser.parse_args()
 
     data_cfg, model_cfg, train_cfg = load_config()
-    # match model input channels to windowed features
-    model_cfg.in_channels = data_cfg.channels * data_cfg.window_size
+    # model accepts raw sensor channels; windowing handled by dataset
+    model_cfg.in_channels = data_cfg.channels
 
     train_dataset, val_dataset = load_datasets(data_cfg)
 
