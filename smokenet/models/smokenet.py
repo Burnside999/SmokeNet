@@ -17,6 +17,7 @@ class SmokeNet(BaseTemporalModel):
         num_classes: int = 5,
         dropout: float = 0.3
     ):
+
         super().__init__()
         
         # 1D-CNN: (B, C, T) -> (B, cnn_hidden, T)
@@ -53,7 +54,7 @@ class SmokeNet(BaseTemporalModel):
 
     def forward(self, x, lengths):
         """
-        x:       (batch, T, C=3)
+        x:       (batch, T, C)
         lengths: (batch,)
         """
         # (B, T, C) -> (B, C, T)
