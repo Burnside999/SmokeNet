@@ -3,6 +3,7 @@
 
 import torch
 from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 
 from .config import ModelConfig, TrainingConfig
 from .models import build_model
@@ -95,7 +96,13 @@ def train(
         weight_decay=train_cfg.weight_decay,
     )
 
-    for epoch in range(1, train_cfg.num_epochs + 1):
+    epoch_bar = tqdm(
+        range(1, train_cfg.num_epochs + 1),
+        desc="Epochs",
+        unit="epoch",
+    )
+
+    for epoch in epoch_bar:
         loss, fire_acc, fuel_acc = train_one_epoch(
             model,
             train_loader,
@@ -105,9 +112,12 @@ def train(
             train_cfg.lambda_fuel,
             fuel_enabled,
         )
-        fuel_log = (
-            f" fuel_acc={fuel_acc:.4f}" if fuel_acc is not None else " fuel_acc=N/A"
+        epoch_bar.set_postfix(
+            {
+                "loss": f"{loss:.4f}",
+                "fire_acc": f"{fire_acc:.4f}",
+                "fuel_acc": f"{fuel_acc:.4f}" if fuel_acc is not None else "N/A",
+            }
         )
-        print(f"[Epoch {epoch}] loss={loss:.4f} fire_acc={fire_acc:.4f}{fuel_log}")
 
     return model
