@@ -44,7 +44,7 @@ def _load_label(label_tensor: torch.Tensor) -> tuple[torch.Tensor, int | None]:
     return fire_seq, fuel_label
 
 
-def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[tuple[Path, Path]]:
+def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[tuple[Path, Path, str]]:
     data_files: dict[str, Path] = {
         p.stem: p for p in data_dir.glob("*.csv") if p.is_file()
     }
@@ -61,7 +61,7 @@ def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[tuple[Path, Path
         )
 
     for stem in sorted(data_files.keys()):
-        yield data_files[stem], label_files[stem]
+        yield data_files[stem], label_files[stem], stem
 
 
 def load_datasets(data_cfg: DataConfig) -> tuple[WindowDataset, WindowDataset]:
@@ -74,8 +74,9 @@ def load_datasets(data_cfg: DataConfig) -> tuple[WindowDataset, WindowDataset]:
     signals: list[torch.Tensor] = []
     fire_labels: list[torch.Tensor] = []
     fuel_labels: list[int | None] = []
+    sample_names: list[str] = []
 
-    for data_path, label_path in _collect_pairs(data_dir, label_dir):
+    for data_path, label_path, stem in _collect_pairs(data_dir, label_dir):
         signal = _load_csv(data_path)
         label_tensor = _load_csv(label_path)
         fire_seq, fuel = _load_label(label_tensor)
@@ -91,12 +92,13 @@ def load_datasets(data_cfg: DataConfig) -> tuple[WindowDataset, WindowDataset]:
         signals.append(signal)
         fire_labels.append(fire_seq)
         fuel_labels.append(fuel)
+        sample_names.append(stem)
 
     if not signals:
         raise ValueError("No paired data/label files were found.")
 
-    assert len(signals) == len(fire_labels) == len(fuel_labels), (
-        "Signals and labels counts must match"
+    assert len(signals) == len(fire_labels) == len(fuel_labels) == len(sample_names), (
+        "Signals, labels, and names counts must match"
     )
 
     dataset = WindowDataset(
@@ -105,6 +107,7 @@ def load_datasets(data_cfg: DataConfig) -> tuple[WindowDataset, WindowDataset]:
         fuel_labels,
         window_size=data_cfg.window_size,
         channels=data_cfg.channels,
+        names=sample_names,
     )
 
     n_total = len(dataset)

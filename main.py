@@ -2,13 +2,11 @@
 
 import argparse
 
-import torch
 from torch.utils.data import DataLoader
 
 from smokenet.config import load_config
 from smokenet.data.collate import smoke_collate_fn
 from smokenet.data.loader import load_datasets
-from smokenet.evaluate import evaluate
 from smokenet.train import train
 
 
@@ -43,10 +41,7 @@ def main():
     )
 
     if args.mode == "train":
-        model = train(train_loader, model_cfg, train_cfg, fuel_enabled)
-        # TODO: 保存 model
-        device = torch.device(train_cfg.device if torch.cuda.is_available() else "cpu")
-        evaluate(model.to(device), val_loader, device, fuel_enabled)
+        model, _ = train(train_loader, val_loader, model_cfg, train_cfg, fuel_enabled)
     else:
         # TODO: 从文件加载模型后 evaluate(...)
         pass

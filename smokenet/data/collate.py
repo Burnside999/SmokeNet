@@ -1,21 +1,22 @@
 import torch
 
 
-def smoke_collate_fn(batch: list[tuple[torch.Tensor, torch.Tensor, int | None]]):
+def smoke_collate_fn(batch: list[tuple[torch.Tensor, torch.Tensor, int | None, str]]):
     """
      batch: list of (x, y_fire_seq, y_fuel)
     x: (T_i, channels, window_size)
     y_fire_seq: (T_i,)
     """
-    lengths = [x.shape[0] for x, _, _ in batch]
+    lengths = [x.shape[0] for x, _, _, _ in batch]
     T_max = max(lengths)
 
     xs = []
     y_fire = []
     y_fuel: list[int | None] = []
+    names: list[str] = []
     mask = torch.zeros(len(batch), T_max, dtype=torch.float32)
 
-    for i, (x, yf, yfu) in enumerate(batch):
+    for i, (x, yf, yfu, name) in enumerate(batch):
         T = x.shape[0]
         pad_len = T_max - T
         if pad_len > 0:
@@ -29,6 +30,7 @@ def smoke_collate_fn(batch: list[tuple[torch.Tensor, torch.Tensor, int | None]])
         xs.append(x_padded)
         y_fire.append(y_padded)
         y_fuel.append(yfu)
+        names.append(name)
         mask[i, :T] = 1.0
 
     xs = torch.stack(xs, dim=0)  # (B, T_max, feature_dim)
@@ -41,4 +43,4 @@ def smoke_collate_fn(batch: list[tuple[torch.Tensor, torch.Tensor, int | None]])
     else:
         y_fuel_tensor = None
 
-    return xs, lengths, y_fire, y_fuel_tensor, mask
+    return xs, lengths, y_fire, y_fuel_tensor, mask, names

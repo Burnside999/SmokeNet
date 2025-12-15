@@ -41,6 +41,7 @@ class WindowDataset(Dataset):
         fuel_labels: list[int | None],
         window_size: int,
         channels: int,
+        names: list[str] | None = None,
     ):
         if len(signals) != len(fire_labels) or len(signals) != len(fuel_labels):
             raise ValueError("Signals and labels must have the same length")
@@ -51,6 +52,9 @@ class WindowDataset(Dataset):
         self.fire_labels = fire_labels
         self.fuel_labels = fuel_labels
         self.fuel_available = all(f is not None for f in fuel_labels)
+        if names is not None and len(names) != len(signals):
+            raise ValueError("Names must have the same length as signals")
+        self.sample_names = names or [f"sample_{i}" for i in range(len(signals))]
 
     def _validate_signal(self, signal: torch.Tensor) -> torch.Tensor:
         signal = signal.float()
@@ -75,4 +79,4 @@ class WindowDataset(Dataset):
         windows = _build_windows(signal, self.window_size)  # (T, channels, window)
         y_fire = self.fire_labels[idx].long()
         y_fuel = self.fuel_labels[idx]
-        return windows, y_fire, y_fuel
+        return windows, y_fire, y_fuel, self.sample_names[idx]

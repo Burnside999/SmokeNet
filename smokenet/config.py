@@ -40,11 +40,13 @@ class ModelConfig:
 class TrainingConfig:
     batch_size: int = 32
     num_epochs: int = 50
+    ckpt_epoch: int = 100
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     lambda_fire: float = 1.0
     lambda_fuel: float = 1.0
     device: str = "cuda"  # or "cpu"
+    output_root: str = "outputs"
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TrainingConfig":
