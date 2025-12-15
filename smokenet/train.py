@@ -1,7 +1,7 @@
 # smokenet/train.py
 
-
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -83,8 +83,10 @@ def train(
     train_cfg: TrainingConfig,
     fuel_enabled: bool,
 ) -> tuple[torch.nn.Module, EvaluationResult]:
+    logger = logging.getLogger("smokenet")
     set_seed(42)
     device = torch.device(train_cfg.device if torch.cuda.is_available() else "cpu")
+    logger.info("Training on device: %s", device)
 
     output_root = Path(train_cfg.output_root)
     weights_dir = output_root / "weights"
@@ -107,6 +109,12 @@ def train(
         model.parameters(),
         lr=train_cfg.learning_rate,
         weight_decay=train_cfg.weight_decay,
+    )
+
+    logger.info(
+        "Optimizer initialized: Adam lr=%.2e weight_decay=%.2e",
+        train_cfg.learning_rate,
+        train_cfg.weight_decay,
     )
 
     epoch_bar = tqdm(
@@ -166,6 +174,7 @@ def train(
                 model_cfg,
                 val_result,
             )
+            logger.info("New best fire accuracy %.4f at epoch %d", best_fire_acc, epoch)
 
         if epoch % train_cfg.ckpt_epoch == 0:
             _save_checkpoint(
@@ -176,6 +185,7 @@ def train(
                 model_cfg,
                 val_result,
             )
+            logger.info("Checkpoint saved for epoch %d", epoch)
 
     if last_result is None:
         raise RuntimeError("Validation was not performed during training")
@@ -188,7 +198,9 @@ def train(
         model_cfg,
         last_result,
     )
-
+    logger.info(
+        "Training complete. Last fire accuracy: %.4f", last_result.fire_accuracy
+    )
     best_to_report = best_result or last_result
     _save_history(output_root, history)
     plot_epoch_accuracy(

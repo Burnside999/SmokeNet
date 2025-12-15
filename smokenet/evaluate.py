@@ -1,5 +1,6 @@
 # smokenet/evaluate.py
 
+import logging
 from dataclasses import dataclass
 
 import torch
@@ -20,6 +21,7 @@ class EvaluationResult:
 def evaluate(
     model, dataloader: DataLoader, device: torch.device, fuel_enabled: bool
 ) -> EvaluationResult:
+    logger = logging.getLogger("smokenet")
     model.eval()
     total_fire_acc = 0.0
     total_fuel_acc = 0.0
@@ -53,13 +55,13 @@ def evaluate(
         n_batches += 1
 
     if n_batches == 0:
-        print("[Eval] Warning: validation dataloader is empty")
+        logger.warning("Validation dataloader is empty")
         return EvaluationResult(0.0, None, [], None)
 
     fire_acc = total_fire_acc / n_batches
     fuel_acc: float | None = total_fuel_acc / n_batches if fuel_enabled else None
     fuel_log = f" fuel_acc={fuel_acc:.4f}" if fuel_acc is not None else " fuel_acc=N/A"
-    print(f"[Eval] fire_acc={fire_acc:.4f}{fuel_log}")
+    logger.info("Evaluation metrics: fire_acc=%.4f%s", fire_acc, fuel_log)
 
     return EvaluationResult(
         fire_accuracy=fire_acc,

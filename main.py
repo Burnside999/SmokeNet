@@ -8,6 +8,7 @@ from smokenet.config import load_config
 from smokenet.data.collate import smoke_collate_fn
 from smokenet.data.loader import load_datasets
 from smokenet.train import train
+from smokenet.utils.logging import setup_logging
 
 
 def main():
@@ -29,13 +30,15 @@ def main():
     args = parser.parse_args()
 
     data_cfg, model_cfg, train_cfg = load_config(args.config)
+    logger = setup_logging(train_cfg.output_root)
+    logger.info("Loaded config from %s", args.config)
 
     def warn_override(cfg, attr, value, label: str):
         if value is None:
             return
         old = getattr(cfg, attr)
         if value != old:
-            print(f"[WARN] override{label}: {old} -> {value}")
+            logger.warning("Override %s: %s -> %s", label, old, value)
         setattr(cfg, attr, value)
 
     warn_override(train_cfg, "batch_size", args.batch_size, "batch_size")
@@ -47,12 +50,18 @@ def main():
     model_cfg.in_channels = data_cfg.channels
 
     train_dataset, val_dataset = load_datasets(data_cfg)
+    logger.info(
+        "Loaded datasets with %d training samples and %d validation samples",
+        len(train_dataset),
+        len(val_dataset),
+    )
 
     base_dataset = (
         train_dataset.dataset if hasattr(train_dataset, "dataset") else train_dataset
     )
     fuel_available = getattr(base_dataset, "fuel_available", False)
     fuel_enabled = model_cfg.enable_fuel_classification and fuel_available
+    logger.info("Fuel classification enabled: %s", fuel_enabled)
 
     train_loader = DataLoader(
         train_dataset,
@@ -69,13 +78,15 @@ def main():
 
     if args.mode == "train":
         if args.model:
-            print("[WARN] --model only used in eval mode, ignored in train mode.")
+            logger.warning("--model only used in eval mode, ignored in train mode.")
         model, _ = train(train_loader, val_loader, model_cfg, train_cfg, fuel_enabled)
     else:
         if not args.model:
-            print("[WARN] no --model provided, cannot load weights in eval mode.")
+            logger.warning("No --model provided, cannot load weights in eval mode.")
         else:
-            print(f"[WARN] eval mode not implemented, skip loading model: {args.model}")
+            logger.warning(
+                "Eval mode not implemented, skip loading model: %s", args.model
+            )
 
 
 if __name__ == "__main__":
