@@ -24,6 +24,10 @@ def _load_label(label_tensor: torch.Tensor) -> tuple[torch.Tensor, int | None]:
         fire_seq = label_tensor.long()
         fuel_label = None
     elif label_tensor.dim() == 2:
+        # Accept both (T, 1) and (1, T) label shapes by rotating row vectors
+        # into column vectors so the timestep dimension is always axis 0.
+        if label_tensor.shape[0] == 1 and label_tensor.shape[1] > 1:
+            label_tensor = label_tensor.transpose(0, 1)
         fire_seq = label_tensor[:, 0].long()
         fuel_label = (
             int(label_tensor[0, 1].item()) if label_tensor.shape[1] > 1 else None
