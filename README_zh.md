@@ -41,10 +41,10 @@ SmokeNet 是一个以研究为导向的 PyTorch 流水线，用于从多通道�
 
 ## 快速开始
 ```bash
-# 训练 | Train
+# 训练
 python main.py --mode train --config config/default.yaml
 
-# 覆盖主要超参 | Override key hyperparameters
+# 覆盖主要超参
 python main.py --mode train --batch-size 16 --learning-rate 5e-4 --device cuda
 ```
 - 训练产物（权重、图像）保存在 `outputs/` 目录。
