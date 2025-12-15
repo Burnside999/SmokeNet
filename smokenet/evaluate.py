@@ -27,6 +27,10 @@ def evaluate(model, dataloader: DataLoader, device: torch.device, fuel_enabled: 
         if fuel_enabled and fuel_logits is not None:
             total_fuel_acc += multiclass_accuracy(fuel_logits, y_fuel)
         n_batches += 1
+    
+    if n_batches == 0:
+        print("[Eval] Warning: validation dataloader is empty")
+        return
 
     fire_acc = total_fire_acc / n_batches
     fuel_acc: Optional[float] = (
