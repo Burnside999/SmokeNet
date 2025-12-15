@@ -11,27 +11,33 @@ from smokenet.config import DataConfig
 from .window import WindowDataset
 
 
-def _load_tensor(path: Path) -> torch.Tensor:
-    if path.suffix in {".pt", ".pth"}:
-        return torch.load(path)
-    # fallback to numpy array
-    array = np.load(path)
+def _load_csv(path: Path) -> torch.Tensor:
+    array = np.loadtxt(path, delimiter=",")
+    if array.ndim == 1:
+        array = np.expand_dims(array, axis=0)
     return torch.from_numpy(array)
 
 
-def _load_label(value) -> Tuple[int, int]:
-    if isinstance(value, dict):
-        return int(value["fire"]), int(value["fuel"])
-    if isinstance(value, (list, tuple)) and len(value) >= 2:
-        return int(value[0]), int(value[1])
-    raise ValueError("Label format must be a dict with fire/fuel or a 2-item sequence")
+def _load_label(label_tensor: torch.Tensor) -> Tuple[int, int]:
+    flat = label_tensor.flatten()
+    if flat.numel() < 2:
+        return int(flat[0].item()), 0
+    return int(flat[0].item()), int(flat[1].item())
 
 
 def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[Tuple[Path, Path]]:
-    data_files: Dict[str, Path] = {p.stem: p for p in data_dir.iterdir() if p.is_file()}
-    label_files: Dict[str, Path] = {p.stem: p for p in label_dir.iterdir() if p.is_file()}
+    data_files: Dict[str, Path] = {p.stem: p for p in data_dir.glob("*.csv") if p.is_file()}
+    label_files: Dict[str, Path] = {p.stem: p for p in label_dir.glob("*.csv") if p.is_file()}
 
-    for stem in sorted(data_files.keys() & label_files.keys()):
+    if data_files.keys() != label_files.keys():
+        missing_in_labels = sorted(data_files.keys() - label_files.keys())
+        missing_in_data = sorted(label_files.keys() - data_files.keys())
+        raise ValueError(
+            "Data and label files must have matching stems. "
+            f"Missing labels for: {missing_in_labels}; missing data for: {missing_in_data}"
+        )
+
+    for stem in sorted(data_files.keys()):
         yield data_files[stem], label_files[stem]
 
 
@@ -47,9 +53,9 @@ def load_datasets(data_cfg: DataConfig) -> Tuple[WindowDataset, WindowDataset]:
     fuel_labels: List[int] = []
 
     for data_path, label_path in _collect_pairs(data_dir, label_dir):
-        signal = _load_tensor(data_path)
-        label_val = _load_tensor(label_path)
-        fire, fuel = _load_label(label_val)
+        signal = _load_csv(data_path)
+        label_tensor = _load_csv(label_path)
+        fire, fuel = _load_label(label_tensor)
 
         signals.append(signal)
         fire_labels.append(fire)
@@ -57,6 +63,8 @@ def load_datasets(data_cfg: DataConfig) -> Tuple[WindowDataset, WindowDataset]:
 
     if not signals:
         raise ValueError("No paired data/label files were found.")
+    
+    assert len(signals) == len(fire_labels) == len(fuel_labels), "Signals and labels counts must match"
 
     dataset = WindowDataset(
         signals,
