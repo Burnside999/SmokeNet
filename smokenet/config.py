@@ -28,6 +28,7 @@ class ModelConfig:
     num_fuel_classes: int = 5
     dropout: float = 0.3
     model_name: str = "smokenet"  # used in model factory
+    enable_fuel_classification: bool = True
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ModelConfig":
