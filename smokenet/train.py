@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
@@ -14,6 +13,7 @@ from .config import ModelConfig, TrainingConfig
 from .evaluate import EvaluationResult, evaluate
 from .models import build_model
 from .utils.metrics import masked_binary_accuracy, multiclass_accuracy
+from .utils.plotting import plot_epoch_accuracy, plot_topk_accuracy
 from .utils.seed import set_seed
 
 
@@ -191,12 +191,12 @@ def train(
 
     best_to_report = best_result or last_result
     _save_history(output_root, history)
-    _plot_epoch_accuracy(
+    plot_epoch_accuracy(
         history,
         figures_dir / "epoch_accuracy.png",
         fuel_enabled,
     )
-    _plot_topk_accuracy(
+    plot_topk_accuracy(
         last_result,
         figures_dir,
         fuel_enabled,
@@ -230,83 +230,3 @@ def _save_history(output_root: Path, history: dict[str, list[Any]]):
     history_path = output_root / "metrics.json"
     with history_path.open("w", encoding="utf-8") as f:
         json.dump(history, f, indent=2)
-
-
-def _plot_epoch_accuracy(
-    history: dict[str, list[Any]], plot_path: Path, fuel_enabled: bool
-):
-    epochs = list(range(1, len(history["train_fire_acc"]) + 1))
-    plt.figure(figsize=(8, 5))
-    plt.plot(epochs, history["train_fire_acc"], label="Train Fire Acc")
-    plt.plot(epochs, history["val_fire_acc"], label="Val Fire Acc")
-
-    if fuel_enabled:
-        plt.plot(epochs, history["train_fuel_acc"], label="Train Fuel Acc")
-        plt.plot(epochs, history["val_fuel_acc"], label="Val Fuel Acc")
-
-    plt.xlabel("Epoch")
-    plt.ylabel("Accuracy")
-    plt.title("Epoch Accuracy")
-    plt.legend()
-    plt.grid(True, linestyle=":", linewidth=0.5)
-    plt.tight_layout()
-    plt.savefig(plot_path)
-    plt.close()
-
-
-def _plot_topk_accuracy(
-    eval_result: EvaluationResult, figures_dir: Path, fuel_enabled: bool
-):
-    figures_dir.mkdir(parents=True, exist_ok=True)
-    _plot_bar_chart(
-        eval_result.per_sample_fire,
-        10,
-        "Top 10 Best Sequences (Fire Accuracy)",
-        figures_dir / "top10_fire_best.png",
-        reverse=True,
-    )
-    _plot_bar_chart(
-        eval_result.per_sample_fire,
-        10,
-        "Top 10 Worst Sequences (Fire Accuracy)",
-        figures_dir / "top10_fire_worst.png",
-        reverse=False,
-    )
-
-    if fuel_enabled and eval_result.per_sample_fuel is not None:
-        _plot_bar_chart(
-            eval_result.per_sample_fuel,
-            10,
-            "Top 10 Best Sequences (Fuel Accuracy)",
-            figures_dir / "top10_fuel_best.png",
-            reverse=True,
-        )
-        _plot_bar_chart(
-            eval_result.per_sample_fuel,
-            10,
-            "Top 10 Worst Sequences (Fuel Accuracy)",
-            figures_dir / "top10_fuel_worst.png",
-            reverse=False,
-        )
-
-
-def _plot_bar_chart(
-    entries: list[tuple[str, float]],
-    k: int,
-    title: str,
-    path: Path,
-    reverse: bool,
-):
-    if not entries:
-        return
-    sorted_entries = sorted(entries, key=lambda x: x[1], reverse=reverse)[:k]
-    labels, values = zip(*sorted_entries)
-    plt.figure(figsize=(10, 5))
-    plt.bar(range(len(values)), values, color="skyblue")
-    plt.xticks(range(len(labels)), labels, rotation=45, ha="right")
-    plt.ylim(0, 1)
-    plt.ylabel("Accuracy")
-    plt.title(title)
-    plt.tight_layout()
-    plt.savefig(path)
-    plt.close()
