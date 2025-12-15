@@ -1,6 +1,6 @@
 # smokenet/data/dataset.py
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import torch
 from torch.utils.data import Dataset
@@ -36,8 +36,8 @@ class WindowDataset(Dataset):
     def __init__(
         self,
         signals: List[torch.Tensor],
-        fire_labels: List[int],
-        fuel_labels: List[int],
+        fire_labels: List[torch.Tensor],
+        fuel_labels: List[Optional[int]],
         window_size: int,
         channels: int,
     ):
@@ -49,6 +49,7 @@ class WindowDataset(Dataset):
         self.signals = [self._validate_signal(sig) for sig in signals]
         self.fire_labels = fire_labels
         self.fuel_labels = fuel_labels
+        self.fuel_available = all(f is not None for f in fuel_labels)
 
     def _validate_signal(self, signal: torch.Tensor) -> torch.Tensor:
         signal = signal.float()
@@ -68,9 +69,9 @@ class WindowDataset(Dataset):
     def __len__(self):
         return len(self.signals)
 
-    def __getitem__(self, idx) -> Tuple[torch.Tensor, int, int]:
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor, Optional[int]]:
         signal = self.signals[idx]
         windows = _build_windows(signal, self.window_size)  # (T, channels*window)
-        y_fire = int(self.fire_labels[idx])
-        y_fuel = int(self.fuel_labels[idx])
+        y_fire = self.fire_labels[idx].long()
+        y_fuel = self.fuel_labels[idx]
         return windows, y_fire, y_fuel

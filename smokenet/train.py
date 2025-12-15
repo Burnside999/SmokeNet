@@ -7,7 +7,8 @@ from torch.utils.data import DataLoader
 from .config import ModelConfig, TrainingConfig
 from .models import build_model
 from .utils.seed import set_seed
-from .utils.metrics import binary_accuracy, multiclass_accuracy
+from .utils.metrics import masked_binary_accuracy, multiclass_accuracy
+
 
 def train_one_epoch(
     model,
@@ -19,7 +20,7 @@ def train_one_epoch(
     fuel_enabled: bool,
 ) -> Tuple[float, float, Optional[float]]:
     model.train()
-    criterion_fire = torch.nn.BCEWithLogitsLoss()
+    criterion_fire = torch.nn.BCEWithLogitsLoss(reduction="none")
     criterion_fuel = torch.nn.CrossEntropyLoss() if fuel_enabled else None
 
     total_loss = 0.0
@@ -27,20 +28,22 @@ def train_one_epoch(
     total_fuel_acc = 0.0
     n_batches = 0
 
-    for xs, lengths, y_fire, y_fuel in dataloader:
+    for xs, lengths, y_fire, y_fuel, mask in dataloader:
         xs = xs.to(device)
         lengths = lengths.to(device)
         y_fire = y_fire.to(device)
-        y_fuel = y_fuel.to(device)
+        mask = mask.to(device)
+        y_fuel = y_fuel.to(device) if y_fuel is not None else None
 
         fire_logits, fuel_logits = model(xs, lengths)
 
         loss_fire = criterion_fire(fire_logits, y_fire)
+        loss_fire = (loss_fire * mask).sum() / mask.sum().clamp(min=1.0)
         loss = lambda_fire * loss_fire
 
         if fuel_enabled:
-            if fuel_logits is None:
-                raise ValueError("Fuel classification is enabled but the model did not return logits.")
+            if fuel_logits is None or y_fuel is None:
+                raise ValueError("Fuel classification is enabled but the model did not return logits or labels.")
             loss_fuel = criterion_fuel(fuel_logits, y_fuel)
             loss = loss + lambda_fuel * loss_fuel
 
@@ -49,8 +52,10 @@ def train_one_epoch(
         optimizer.step()
 
         total_loss += loss.item()
-        total_fire_acc += binary_accuracy(fire_logits.detach(), y_fire.detach())
-        if fuel_enabled and fuel_logits is not None:
+        total_fire_acc += masked_binary_accuracy(
+            fire_logits.detach(), y_fire.detach(), mask.detach()
+        )
+        if fuel_enabled and fuel_logits is not None and y_fuel is not None:
             total_fuel_acc += multiclass_accuracy(fuel_logits.detach(), y_fuel.detach())
         n_batches += 1
 
@@ -66,11 +71,10 @@ def train(
     train_loader: DataLoader,
     model_cfg: ModelConfig,
     train_cfg: TrainingConfig,
+    fuel_enabled: bool,
 ):
     set_seed(42)
     device = torch.device(train_cfg.device if torch.cuda.is_available() else "cpu")
-
-    fuel_enabled = model_cfg.enable_fuel_classification
 
     model = build_model(
         model_cfg.model_name,

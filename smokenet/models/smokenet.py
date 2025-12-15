@@ -83,7 +83,9 @@ class SmokeNet(BaseTemporalModel):
         packed_out, _ = self.lstm(packed)
         out, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True)
 
-        # masked mean pooling
+        fire_logits = self.fc_fire(out).squeeze(-1)  # (B, T_max)
+
+        # masked mean pooling for sequence-level fuel classification
         batch_size, T_max, feat_dim = out.size()
         device = out.device
         mask = torch.arange(T_max, device=device)[None, :] < lengths[:, None]
@@ -95,8 +97,6 @@ class SmokeNet(BaseTemporalModel):
         h_seq = sum_feat / len_feat  # (B, feat_dim)
 
         h_seq = self.dropout(h_seq)
-
-        fire_logits = self.fc_fire(h_seq).squeeze(-1)  # (B,)
 
         fuel_logits: Optional[torch.Tensor]
         if self.enable_fuel_classification and self.fc_fuel is not None:

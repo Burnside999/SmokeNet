@@ -18,9 +18,12 @@ def main():
     data_cfg, model_cfg, train_cfg = load_config()
     # match model input channels to windowed features
     model_cfg.in_channels = data_cfg.channels * data_cfg.window_size
-    fuel_enabled = model_cfg.enable_fuel_classification
 
     train_dataset, val_dataset = load_datasets(data_cfg)
+
+    base_dataset = train_dataset.dataset if hasattr(train_dataset, "dataset") else train_dataset
+    fuel_available = getattr(base_dataset, "fuel_available", False)
+    fuel_enabled = model_cfg.enable_fuel_classification and fuel_available
 
     train_loader = DataLoader(
         train_dataset,
@@ -36,7 +39,7 @@ def main():
     )
     
     if args.mode == "train":
-        model = train(train_loader, model_cfg, train_cfg)
+        model = train(train_loader, model_cfg, train_cfg, fuel_enabled)
         # TODO: 保存 model
         device = torch.device(train_cfg.device if torch.cuda.is_available() else "cpu")
         evaluate(model.to(device), val_loader, device, fuel_enabled)

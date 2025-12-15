@@ -1,7 +1,7 @@
 # smokenet/data/loader.py
 
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -18,11 +18,21 @@ def _load_csv(path: Path) -> torch.Tensor:
     return torch.from_numpy(array)
 
 
-def _load_label(label_tensor: torch.Tensor) -> Tuple[int, int]:
-    flat = label_tensor.flatten()
-    if flat.numel() < 2:
-        return int(flat[0].item()), 0
-    return int(flat[0].item()), int(flat[1].item())
+def _load_label(label_tensor: torch.Tensor) -> Tuple[torch.Tensor, Optional[int]]:
+    if label_tensor.dim() == 1:
+        fire_seq = label_tensor.long()
+        fuel_label = None
+    elif label_tensor.dim() == 2:
+        fire_seq = label_tensor[:, 0].long()
+        fuel_label = int(label_tensor[0, 1].item()) if label_tensor.shape[1] > 1 else None
+        if fuel_label is not None:
+            # Ensure the provided fuel label is sequence-level and consistent.
+            if not torch.all(label_tensor[:, 1] == label_tensor[0, 1]):
+                raise ValueError("Fuel label column must be constant across the sequence")
+    else:
+        raise ValueError("Label tensor must be 1D or 2D")
+
+    return fire_seq, fuel_label
 
 
 def _collect_pairs(data_dir: Path, label_dir: Path) -> Iterable[Tuple[Path, Path]]:
@@ -49,16 +59,23 @@ def load_datasets(data_cfg: DataConfig) -> Tuple[WindowDataset, WindowDataset]:
         raise FileNotFoundError("Data or label directory does not exist")
 
     signals: List[torch.Tensor] = []
-    fire_labels: List[int] = []
-    fuel_labels: List[int] = []
+    fire_labels: List[torch.Tensor] = []
+    fuel_labels: List[int | None] = []
 
     for data_path, label_path in _collect_pairs(data_dir, label_dir):
         signal = _load_csv(data_path)
         label_tensor = _load_csv(label_path)
-        fire, fuel = _load_label(label_tensor)
+        fire_seq, fuel = _load_label(label_tensor)
+
+        print(signal.shape, fire_seq.shape)
+
+        if signal.shape[-1] != fire_seq.shape[0] and signal.shape[0] != fire_seq.shape[0]:
+            raise ValueError(
+                f"Signal length ({signal.shape[-1]}) and label length ({fire_seq.shape[0]}) must match"
+            )
 
         signals.append(signal)
-        fire_labels.append(fire)
+        fire_labels.append(fire_seq)
         fuel_labels.append(fuel)
 
     if not signals:
